@@ -1,55 +1,94 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <title>Spring 3D Model with Post-Processing</title>
+    <title>Spring 3D Model with Animations</title>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <!-- ImportMap для three.js -->
-    <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.157.0/build/three.module.js"
+    <meta name="description" content="3D Spring model with multiple animations">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link type="text/css" href="./styles.css" rel="stylesheet"/>
+    <style>
+      /* Стили для кнопок управления анимацией */
+      .animation-controls {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10;
+        display: flex;
+        gap: 10px;
       }
-    }
-    </script>
+      .animation-btn {
+        padding: 8px 16px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+    </style>
   </head>
   <body>
     <model-viewer 
-      id="spring-model"
-      src="Low poly spring scene3.glb"
-      camera-controls
-      tone-mapping="neutral"
-      shadow-intensity="1"
+      src="Low poly spring scene3.glb" 
+      ar 
+      ar-modes="webxr scene-viewer quick-look" 
+      camera-controls 
+      tone-mapping="neutral" 
+      poster="poster.webp" 
+      shadow-intensity="1" 
+      animation-name="ArmatureAction.004" 
+      id="spring-model" 
+      cross-fade-duration="500"
       autoplay
-      rendering="quality"
     >
+      <div class="progress-bar hide" slot="progress-bar">
+        <div class="update-bar"></div>
+      </div>
+      <button slot="ar-button" id="ar-button">
+        View in your space
+      </button>
+      <div id="ar-prompt">
+        <img src="ar_hand_prompt.png">
+      </div>
+      
+      <!-- Кнопки управления анимацией -->
+      <div class="animation-controls">
+        <button class="animation-btn" data-animation="ArmatureAction.004">Animation 1</button>
+        <button class="animation-btn" data-animation="Branch.002Action">Animation 2</button>
+      </div>
     </model-viewer>
 
-    <!-- Модульная версия model-viewer -->
-    <script type="module" src="https://unpkg.com/@google/model-viewer@4.0.0/dist/model-viewer.module.js"></script>
-
-    <!-- Post-processing эффекты -->
-    <script type="module">
-    import * as Postprocessing from 'https://unpkg.com/@google/model-viewer-effects@latest';
-
-    const modelViewer = document.querySelector('#spring-model');
-
-    modelViewer.addEventListener('load', async () => {
-      console.log('Model loaded, applying post-processing effects...');
-
-      const bloom = new Postprocessing.BloomEffect(modelViewer);
-      bloom.intensity = 0.8;
-      bloom.radius = 0.6;
-
-      const pixelated = new Postprocessing.PixelatedEffect(modelViewer);
-      pixelated.pixelSize = 2;
-
-      await modelViewer.addEffect(bloom);
-      await modelViewer.addEffect(pixelated);
-
-      console.log('Effects applied.');
-    });
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const modelViewer = document.querySelector('#spring-model');
+        const animationButtons = document.querySelectorAll('.animation-btn');
+        
+        // Автоматическое переключение анимаций каждые 5 секунд
+        let animationIndex = 0;
+        const animations = ['ArmatureAction.004', 'Branch.002Action'];
+        
+        function cycleAnimations() {
+          animationIndex = (animationIndex + 1) % animations.length;
+          modelViewer.animationName = animations[animationIndex];
+        }
+        
+        // Запускаем цикл анимаций
+        let animationInterval = setInterval(cycleAnimations, 5000);
+        
+        // Ручное управление анимациями через кнопки
+        animationButtons.forEach(button => {
+          button.addEventListener('click', () => {
+            clearInterval(animationInterval); // Останавливаем автоцикл
+            modelViewer.animationName = button.dataset.animation;
+          });
+        });
+        
+        // Получаем список доступных анимаций после загрузки модели
+        modelViewer.addEventListener('load', () => {
+          console.log('Available animations:', modelViewer.availableAnimations);
+        });
+      });
     </script>
-  </body>
-</html>
+    
+    <!-- Loads <model-viewer> for browsers: -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
