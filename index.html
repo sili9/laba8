@@ -1,94 +1,167 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <title>Spring 3D Model with Animations</title>
+<html lang="ru">
+<head>
+    <title>3D Модель с эффектами пост-обработки</title>
     <meta charset="utf-8">
-    <meta name="description" content="3D Spring model with multiple animations">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link type="text/css" href="./styles.css" rel="stylesheet"/>
     <style>
-      /* Стили для кнопок управления анимацией */
-      .animation-controls {
-        position: absolute;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 10;
-        display: flex;
-        gap: 10px;
-      }
-      .animation-btn {
-        padding: 8px 16px;
-        background: rgba(0,0,0,0.7);
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-      }
+        model-viewer {
+            width: 100%;
+            height: 100vh;
+        }
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .control-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        button {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button.active {
+            background: orange;
+            color: black;
+        }
+        label {
+            color: white;
+            min-width: 120px;
+        }
+        input[type="range"] {
+            width: 200px;
+        }
     </style>
-  </head>
-  <body>
+</head>
+<body>
     <model-viewer 
-      src="Low poly spring scene3.glb" 
-      ar 
-      ar-modes="webxr scene-viewer quick-look" 
-      camera-controls 
-      tone-mapping="neutral" 
-      poster="poster.webp" 
-      shadow-intensity="1" 
-      animation-name="ArmatureAction.004" 
-      id="spring-model" 
-      cross-fade-duration="500"
-      autoplay
+        id="spring-model"
+        src="Low poly spring scene3.glb"
+        camera-controls
+        auto-rotate
+        shadow-intensity="1"
+        animation-name="ArmatureAction.004"
+        ar
+        ar-modes="webxr scene-viewer quick-look"
     >
-      <div class="progress-bar hide" slot="progress-bar">
-        <div class="update-bar"></div>
-      </div>
-      <button slot="ar-button" id="ar-button">
-        View in your space
-      </button>
-      <div id="ar-prompt">
-        <img src="ar_hand_prompt.png">
-      </div>
-      
-      <!-- Кнопки управления анимацией -->
-      <div class="animation-controls">
-        <button class="animation-btn" data-animation="ArmatureAction.004">Animation 1</button>
-        <button class="animation-btn" data-animation="Branch.002Action">Animation 2</button>
-      </div>
+        <!-- Эффекты пост-обработки -->
+        <effect-composer render-mode="quality" msaa="4">
+            <bloom-effect strength="1.5" radius="0.4" threshold="0.8"></bloom-effect>
+            <color-grade-effect></color-grade-effect>
+        </effect-composer>
+
+        <!-- Панель управления -->
+        <div class="controls">
+            <div class="control-group">
+                <label>Bloom Strength:</label>
+                <input type="range" id="bloom-strength" min="0" max="2" step="0.1" value="1.5">
+            </div>
+            <div class="control-group">
+                <label>Bloom Radius:</label>
+                <input type="range" id="bloom-radius" min="0" max="1" step="0.05" value="0.4">
+            </div>
+            <div class="control-group">
+                <button id="animation1">Анимация 1</button>
+                <button id="animation2">Анимация 2</button>
+            </div>
+        </div>
     </model-viewer>
 
-    <script>
-      document.addEventListener('DOMContentLoaded', () => {
+    <!-- Полифилл для Safari -->
+    <script async src="https://ga.jspm.io/npm:es-module-shims@1.7.1/dist/es-module-shims.js"></script>
+
+    <!-- Импорт-мап для Three.js -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.min.js"
+        }
+    }
+    </script>
+
+    <!-- Основной скрипт -->
+    <script type="module">
+        // Импортируем необходимые компоненты
+        import { ModelViewerElement } from 'https://cdn.jsdelivr.net/npm/@google/model-viewer/dist/model-viewer-element.min.js';
+        import 'https://cdn.jsdelivr.net/npm/@google/model-viewer-effects/dist/model-viewer-effects.min.js';
+
+        // Ждем загрузки всех компонентов
+        await Promise.all([
+            customElements.whenDefined('model-viewer'),
+            customElements.whenDefined('effect-composer')
+        ]);
+
+        // Получаем элементы
         const modelViewer = document.querySelector('#spring-model');
-        const animationButtons = document.querySelectorAll('.animation-btn');
-        
-        // Автоматическое переключение анимаций каждые 5 секунд
+        const bloomEffect = modelViewer.querySelector('bloom-effect');
+        const strengthControl = document.querySelector('#bloom-strength');
+        const radiusControl = document.querySelector('#bloom-radius');
+        const animation1Btn = document.querySelector('#animation1');
+        const animation2Btn = document.querySelector('#animation2');
+
+        // Управление эффектом Bloom
+        strengthControl.addEventListener('input', (e) => {
+            bloomEffect.strength = parseFloat(e.target.value);
+        });
+
+        radiusControl.addEventListener('input', (e) => {
+            bloomEffect.radius = parseFloat(e.target.value);
+        });
+
+        // Управление анимациями
+        animation1Btn.addEventListener('click', () => {
+            modelViewer.animationName = 'ArmatureAction.004';
+            animation1Btn.classList.add('active');
+            animation2Btn.classList.remove('active');
+        });
+
+        animation2Btn.addEventListener('click', () => {
+            modelViewer.animationName = 'Branch.002Action';
+            animation2Btn.classList.add('active');
+            animation1Btn.classList.remove('active');
+        });
+
+        // Автопереключение анимаций
         let animationIndex = 0;
         const animations = ['ArmatureAction.004', 'Branch.002Action'];
         
         function cycleAnimations() {
-          animationIndex = (animationIndex + 1) % animations.length;
-          modelViewer.animationName = animations[animationIndex];
+            animationIndex = (animationIndex + 1) % animations.length;
+            modelViewer.animationName = animations[animationIndex];
+            
+            // Обновляем активную кнопку
+            document.querySelectorAll('.controls button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`#animation${animationIndex+1}`).classList.add('active');
         }
         
-        // Запускаем цикл анимаций
         let animationInterval = setInterval(cycleAnimations, 5000);
         
-        // Ручное управление анимациями через кнопки
-        animationButtons.forEach(button => {
-          button.addEventListener('click', () => {
-            clearInterval(animationInterval); // Останавливаем автоцикл
-            modelViewer.animationName = button.dataset.animation;
-          });
+        // Останавливаем автоцикл при ручном выборе анимации
+        [animation1Btn, animation2Btn].forEach(btn => {
+            btn.addEventListener('click', () => {
+                clearInterval(animationInterval);
+            });
         });
-        
-        // Получаем список доступных анимаций после загрузки модели
-        modelViewer.addEventListener('load', () => {
-          console.log('Available animations:', modelViewer.availableAnimations);
-        });
-      });
+
+        // Инициализация - активируем первую анимацию
+        animation1Btn.classList.add('active');
     </script>
-    
-    <!-- Loads <model-viewer> for browsers: -->
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+</body>
+</html>
