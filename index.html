@@ -2,7 +2,7 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <title>Spring 3D Model with Post-Processing</title>
+    <title>Spring 3D Model with Bloom & Pixelated Effects</title>
     <meta charset="utf-8">
     <meta name="description" content="3D Spring model with post-processing effects">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -37,9 +37,10 @@
       poster="poster.webp" 
       shadow-intensity="1" 
       animation-name="ArmatureAction.004" 
-      id="spring-model" 
       cross-fade-duration="500"
       autoplay
+      rendering="quality"
+      id="spring-model"
     >
       <div class="progress-bar hide" slot="progress-bar">
         <div class="update-bar"></div>
@@ -62,16 +63,20 @@
 
       const modelViewer = document.querySelector('#spring-model');
 
-      modelViewer.addEventListener('load', () => {
+      modelViewer.addEventListener('load', async () => {
+        console.log('Model loaded. Adding post-processing effects...');
+
         const bloomEffect = new Postprocessing.BloomEffect(modelViewer);
-        bloomEffect.intensity = 0.5;
-        bloomEffect.radius = 0.7;
+        bloomEffect.intensity = 0.8;
+        bloomEffect.radius = 0.6;
 
         const pixelatedEffect = new Postprocessing.PixelatedEffect(modelViewer);
-        pixelatedEffect.pixelSize = 3.0;
+        pixelatedEffect.pixelSize = 2.0;
 
-        modelViewer.addEffect(bloomEffect);
-        modelViewer.addEffect(pixelatedEffect);
+        await modelViewer.addEffect(bloomEffect);
+        await modelViewer.addEffect(pixelatedEffect);
+
+        console.log('Post-processing effects applied.');
       });
     </script>
   </body>
