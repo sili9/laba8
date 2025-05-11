@@ -1,13 +1,13 @@
+
 <!doctype html>
 <html lang="en">
   <head>
-    <title>Spring 3D Model with Animations</title>
+    <title>Spring 3D Model with Post-Processing</title>
     <meta charset="utf-8">
-    <meta name="description" content="3D Spring model with multiple animations">
+    <meta name="description" content="3D Spring model with post-processing effects">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link type="text/css" href="./styles.css" rel="stylesheet"/>
     <style>
-      /* Стили для кнопок управления анимацией */
       .animation-controls {
         position: absolute;
         bottom: 20px;
@@ -44,53 +44,35 @@
       <div class="progress-bar hide" slot="progress-bar">
         <div class="update-bar"></div>
       </div>
-      <button slot="ar-button" id="ar-button">
-        View in your space
-      </button>
+      <button slot="ar-button" id="ar-button">View in your space</button>
       <div id="ar-prompt">
         <img src="ar_hand_prompt.png">
       </div>
-      
-      <!-- Кнопки управления анимацией -->
       <div class="animation-controls">
         <button class="animation-btn" data-animation="ArmatureAction.004">Animation 1</button>
         <button class="animation-btn" data-animation="Branch.002Action">Animation 2</button>
       </div>
     </model-viewer>
 
-    <script>
-      document.addEventListener('DOMContentLoaded', () => {
-        const modelViewer = document.querySelector('#spring-model');
-        const animationButtons = document.querySelectorAll('.animation-btn');
-        
-        // Автоматическое переключение анимаций каждые 5 секунд
-        let animationIndex = 0;
-        const animations = ['ArmatureAction.004', 'Branch.002Action'];
-        
-        function cycleAnimations() {
-          animationIndex = (animationIndex + 1) % animations.length;
-          modelViewer.animationName = animations[animationIndex];
-        }
-        
-        // Запускаем цикл анимаций
-        let animationInterval = setInterval(cycleAnimations, 5000);
-        
-        // Ручное управление анимациями через кнопки
-        animationButtons.forEach(button => {
-          button.addEventListener('click', () => {
-            clearInterval(animationInterval); // Останавливаем автоцикл
-            modelViewer.animationName = button.dataset.animation;
-          });
-        });
-        
-        // Получаем список доступных анимаций после загрузки модели
-        modelViewer.addEventListener('load', () => {
-          console.log('Available animations:', modelViewer.availableAnimations);
-        });
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+
+    <!-- Постобработка: Bloom и Pixelated -->
+    <script type="module">
+      import * as Postprocessing from 'https://unpkg.com/@google/model-viewer-effects@latest';
+
+      const modelViewer = document.querySelector('#spring-model');
+
+      modelViewer.addEventListener('load', () => {
+        const bloomEffect = new Postprocessing.BloomEffect(modelViewer);
+        bloomEffect.intensity = 0.5;
+        bloomEffect.radius = 0.7;
+
+        const pixelatedEffect = new Postprocessing.PixelatedEffect(modelViewer);
+        pixelatedEffect.pixelSize = 3.0;
+
+        modelViewer.addEffect(bloomEffect);
+        modelViewer.addEffect(pixelatedEffect);
       });
     </script>
-    
-    <!-- Loads <model-viewer> for browsers: -->
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
   </body>
 </html>
