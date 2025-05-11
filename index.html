@@ -3,7 +3,7 @@
   <head>
     <title>Spring 3D Model with Effects</title>
     <meta charset="utf-8">
-    <meta name="description" content="3D Spring model with pixelation effect">
+    <meta name="description" content="3D Spring model with visual effects">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
       body {
@@ -18,33 +18,22 @@
         height: 100vh;
         --poster-color: transparent;
         --progress-bar-color: transparent;
-      }
-      
-      /* Контейнер для эффектов */
-      #model-container {
-        position: relative;
-        width: 100vw;
-        height: 100vh;
-      }
-      
-      /* Эффект пикселизации */
-      .pixelate {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: inherit;
-        image-rendering: pixelated;
-        image-rendering: crisp-edges;
-        pointer-events: none;
-        opacity: 0;
-        transition: opacity 0.3s;
+        transition: filter 0.3s ease;
       }
       
       /* Эффект свечения */
       .bloom-effect {
         filter: brightness(1.2) contrast(1.1) drop-shadow(0 0 8px rgba(255,255,255,0.6));
+      }
+      
+      /* Эффект сепии */
+      .sepia-effect {
+        filter: sepia(80%) contrast(1.1) brightness(0.9);
+      }
+      
+      /* Эффект инверсии цветов */
+      .invert-effect {
+        filter: invert(100%);
       }
       
       /* Кнопки управления */
@@ -55,7 +44,10 @@
         transform: translateX(-50%);
         z-index: 10;
         display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
         gap: 10px;
+        max-width: 90%;
       }
       
       .control-btn {
@@ -66,35 +58,40 @@
         border-radius: 4px;
         cursor: pointer;
         font-family: Arial, sans-serif;
+        font-size: 14px;
+        white-space: nowrap;
+      }
+      
+      .control-btn.active {
+        background: rgba(255,255,255,0.2);
+        outline: 1px solid white;
       }
     </style>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
   </head>
   <body>
-    <div id="model-container">
-      <model-viewer 
-        src="Low poly spring scene3.glb" 
-        camera-controls 
-        tone-mapping="neutral" 
-        shadow-intensity="1" 
-        animation-name="ArmatureAction.004" 
-        id="spring-model" 
-        cross-fade-duration="500"
-        autoplay
-        exposure="1.2"
-        environment-image="neutral"
-        auto-rotate
-        class="bloom-effect"
-      >
-      </model-viewer>
-      <canvas id="pixelate-effect" class="pixelate"></canvas>
-    </div>
+    <model-viewer 
+      src="Low poly spring scene3.glb" 
+      camera-controls 
+      tone-mapping="neutral" 
+      shadow-intensity="1" 
+      animation-name="ArmatureAction.004" 
+      id="spring-model" 
+      cross-fade-duration="500"
+      autoplay
+      exposure="1.2"
+      environment-image="neutral"
+      auto-rotate
+      class="bloom-effect"
+    >
+    </model-viewer>
 
     <div class="controls">
       <button class="control-btn" data-animation="ArmatureAction.004">Animation 1</button>
       <button class="control-btn" data-animation="Branch.002Action">Animation 2</button>
-      <button class="control-btn" id="pixel-btn">Pixel Effect</button>
-      <button class="control-btn" id="bloom-btn">Bloom Effect</button>
+      <button class="control-btn active" id="bloom-btn">Bloom ON</button>
+      <button class="control-btn" id="sepia-btn">Sepia OFF</button>
+      <button class="control-btn" id="invert-btn">Invert OFF</button>
     </div>
 
     <script type="module">
@@ -102,67 +99,18 @@
       await customElements.whenDefined('model-viewer');
       
       const modelViewer = document.querySelector('#spring-model');
-      const pixelEffect = document.querySelector('#pixelate-effect');
-      const pixelBtn = document.querySelector('#pixel-btn');
       const bloomBtn = document.querySelector('#bloom-btn');
+      const sepiaBtn = document.querySelector('#sepia-btn');
+      const invertBtn = document.querySelector('#invert-btn');
       let animationInterval;
-      let pixelActive = false;
-      let bloomActive = true;
       const animations = ['ArmatureAction.004', 'Branch.002Action'];
       
-      // Настройка пиксельного эффекта
-      function setupPixelEffect() {
-        const canvas = pixelEffect;
-        const ctx = canvas.getContext('2d');
-        const container = document.getElementById('model-container');
-        
-        canvas.width = container.offsetWidth;
-        canvas.height = container.offsetHeight;
-        
-        function drawPixelated() {
-          if (!pixelActive) return;
-          
-          // Получаем текущее изображение из model-viewer
-          const model = document.querySelector('model-viewer');
-          const viewport = model.shadowRoot.querySelector('.viewport');
-          const canvas3D = viewport.querySelector('canvas');
-          
-          // Устанавливаем размеры
-          canvas.width = canvas3D.width / 4;
-          canvas.height = canvas3D.height / 4;
-          
-          // Рисуем уменьшенное изображение
-          ctx.drawImage(canvas3D, 0, 0, canvas.width, canvas.height);
-          
-          // Увеличиваем обратно с пикселизацией
-          ctx.imageSmoothingEnabled = false;
-          ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 
-                        0, 0, container.offsetWidth, container.offsetHeight);
-          
-          requestAnimationFrame(drawPixelated);
-        }
-        
-        // Обработчик изменения размера
-        window.addEventListener('resize', () => {
-          canvas.width = container.offsetWidth;
-          canvas.height = container.offsetHeight;
-        });
-        
-        drawPixelated();
-      }
-      
-      // Переключение пиксельного эффекта
-      function togglePixelEffect() {
-        pixelActive = !pixelActive;
-        pixelEffect.style.opacity = pixelActive ? 1 : 0;
-        pixelBtn.textContent = pixelActive ? 'Disable Pixel' : 'Pixel Effect';
-      }
-      
-      // Переключение эффекта свечения
-      function toggleBloomEffect() {
-        bloomActive = !bloomActive;
-        modelViewer.classList.toggle('bloom-effect', bloomActive);
-        bloomBtn.textContent = bloomActive ? 'Disable Bloom' : 'Bloom Effect';
+      // Переключение эффектов
+      function toggleEffect(btn, effectClass) {
+        const isActive = modelViewer.classList.contains(effectClass);
+        modelViewer.classList.toggle(effectClass, !isActive);
+        btn.classList.toggle('active', !isActive);
+        btn.textContent = `${btn.id.replace('-btn', '')} ${!isActive ? 'ON' : 'OFF'}`;
       }
       
       // Автоматическое переключение анимаций
@@ -174,9 +122,6 @@
       
       // Инициализация
       document.addEventListener('DOMContentLoaded', () => {
-        // Настройка эффектов
-        setupPixelEffect();
-        
         // Кнопки управления анимациями
         document.querySelectorAll('.control-btn[data-animation]').forEach(btn => {
           btn.addEventListener('click', () => {
@@ -185,8 +130,9 @@
         });
         
         // Кнопки эффектов
-        pixelBtn.addEventListener('click', togglePixelEffect);
-        bloomBtn.addEventListener('click', toggleBloomEffect);
+        bloomBtn.addEventListener('click', () => toggleEffect(bloomBtn, 'bloom-effect'));
+        sepiaBtn.addEventListener('click', () => toggleEffect(sepiaBtn, 'sepia-effect'));
+        invertBtn.addEventListener('click', () => toggleEffect(invertBtn, 'invert-effect'));
         
         // Центрирование модели
         modelViewer.addEventListener('load', () => {
