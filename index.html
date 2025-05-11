@@ -53,7 +53,7 @@
       
       <!-- Кнопки управления анимацией -->
       <div class="animation-controls">
-        <button class="animation-btn" data-animation="Конус.001Action.005">Animation 1</button>
+        <button class="animation-btn" data-animation="ArmatureAction.004">Animation 1</button>
         <button class="animation-btn" data-animation="Branch.002Action">Animation 2</button>
       </div>
     </model-viewer>
@@ -65,7 +65,7 @@
         
         // Автоматическое переключение анимаций каждые 5 секунд
         let animationIndex = 0;
-        const animations = ['Конус.001Action.005', 'Branch.002Action'];
+        const animations = ['ArmatureAction.004', 'Branch.002Action'];
         
         function cycleAnimations() {
           animationIndex = (animationIndex + 1) % animations.length;
