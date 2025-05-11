@@ -1,12 +1,9 @@
-
 <!doctype html>
 <html lang="en">
   <head>
-    <title>Spring 3D Model with Bloom & Pixelated Effects</title>
+    <title>Spring 3D Model with Post-Processing</title>
     <meta charset="utf-8">
-    <meta name="description" content="3D Spring model with post-processing effects">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link type="text/css" href="./styles.css" rel="stylesheet"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
       .animation-controls {
         position: absolute;
@@ -26,57 +23,64 @@
         cursor: pointer;
       }
     </style>
+
+    <!-- ImportMap для Three.js -->
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.157.0/build/three.module.js"
+      }
+    }
+    </script>
   </head>
   <body>
     <model-viewer 
-      src="Low poly spring scene3.glb" 
-      ar 
-      ar-modes="webxr scene-viewer quick-look" 
-      camera-controls 
-      tone-mapping="neutral" 
-      poster="poster.webp" 
-      shadow-intensity="1" 
-      animation-name="ArmatureAction.004" 
+      src="Low poly spring scene3.glb"
+      camera-controls
+      tone-mapping="neutral"
+      shadow-intensity="1"
+      animation-name="ArmatureAction.004"
       cross-fade-duration="500"
       autoplay
       rendering="quality"
       id="spring-model"
     >
-      <div class="progress-bar hide" slot="progress-bar">
-        <div class="update-bar"></div>
-      </div>
-      <button slot="ar-button" id="ar-button">View in your space</button>
-      <div id="ar-prompt">
-        <img src="ar_hand_prompt.png">
-      </div>
       <div class="animation-controls">
         <button class="animation-btn" data-animation="ArmatureAction.004">Animation 1</button>
         <button class="animation-btn" data-animation="Branch.002Action">Animation 2</button>
       </div>
     </model-viewer>
 
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+    <!-- Модульная версия model-viewer -->
+    <script type="module" src="https://unpkg.com/@google/model-viewer@4.0.0/dist/model-viewer.module.js"></script>
 
-    <!-- Постобработка: Bloom и Pixelated -->
+    <!-- Подключаем эффекты post-processing -->
     <script type="module">
       import * as Postprocessing from 'https://unpkg.com/@google/model-viewer-effects@latest';
 
       const modelViewer = document.querySelector('#spring-model');
 
       modelViewer.addEventListener('load', async () => {
-        console.log('Model loaded. Adding post-processing effects...');
+        console.log('Model loaded, applying effects...');
 
-        const bloomEffect = new Postprocessing.BloomEffect(modelViewer);
-        bloomEffect.intensity = 0.8;
-        bloomEffect.radius = 0.6;
+        const bloom = new Postprocessing.BloomEffect(modelViewer);
+        bloom.intensity = 0.8;
+        bloom.radius = 0.6;
 
-        const pixelatedEffect = new Postprocessing.PixelatedEffect(modelViewer);
-        pixelatedEffect.pixelSize = 2.0;
+        const pixelate = new Postprocessing.PixelatedEffect(modelViewer);
+        pixelate.pixelSize = 2;
 
-        await modelViewer.addEffect(bloomEffect);
-        await modelViewer.addEffect(pixelatedEffect);
+        await modelViewer.addEffect(bloom);
+        await modelViewer.addEffect(pixelate);
 
-        console.log('Post-processing effects applied.');
+        console.log('Effects applied.');
+      });
+
+      // Управление анимацией
+      document.querySelectorAll('.animation-btn').forEach(button => {
+        button.addEventListener('click', () => {
+          modelViewer.animationName = button.dataset.animation;
+        });
       });
     </script>
   </body>
