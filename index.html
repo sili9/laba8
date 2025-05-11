@@ -7,40 +7,24 @@
     <style>
         body {
             margin: 0;
-            padding: 0;
+            padding: 20px;
             font-family: Arial, sans-serif;
         }
         model-viewer {
             width: 100%;
-            height: 80vh;
+            height: 70vh;
             background-color: #f0f0f0;
+            margin-bottom: 20px;
         }
         .controls {
-            padding: 20px;
+            padding: 15px;
             background: white;
-            border-radius: 10px;
-            margin: 20px;
+            border-radius: 8px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        .progress-bar {
-            display: block;
-            width: 80%;
-            height: 10px;
-            max-width: 400px;
-            margin: 20px auto;
-            border: 1px solid #ccc;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        .update-bar {
-            height: 100%;
-            width: 0%;
-            background-color: #4CAF50;
-            transition: width 0.3s;
         }
         button {
             padding: 8px 16px;
-            margin: 5px;
+            margin-right: 10px;
             background: #6200ee;
             color: white;
             border: none;
@@ -49,72 +33,65 @@
         }
         button.active {
             background: #03dac6;
-            color: #000;
+            color: black;
         }
     </style>
 </head>
 <body>
-    <h1>Весенняя сцена с эффектами</h1>
+    <h1>3D Модель с эффектами Bloom и Outline</h1>
     
-    <!-- Модель с эффектами -->
+    <!-- Model Viewer с эффектами -->
     <model-viewer
-        id="spring-model"
+        id="model"
         src="Low poly spring scene3.glb"
         camera-controls
         auto-rotate
         ar
         shadow-intensity="1"
-        environment-image="neutral"
-        alt="3D весенняя сцена"
+        alt="3D модель весны"
     >
-        <!-- Индикатор загрузки -->
-        <div class="progress-bar" slot="progress-bar">
-            <div class="update-bar"></div>
-        </div>
-
-        <!-- Эффекты пост-обработки -->
         <effect-composer>
             <bloom-effect strength="1.0" radius="0.5" threshold="0.8"></bloom-effect>
             <outline-effect color="#ffffff" strength="2.0"></outline-effect>
         </effect-composer>
     </model-viewer>
 
-    <!-- Панель управления -->
     <div class="controls">
-        <h2>Управление эффектами</h2>
-        <button id="bloom-toggle">Bloom: Вкл</button>
-        <button id="outline-toggle">Контур: Вкл</button>
+        <button id="bloom-btn">Bloom: Вкл</button>
+        <button id="outline-btn">Outline: Вкл</button>
     </div>
 
     <!-- Полифилл для Safari -->
-    <script async src="https://ga.jspm.io/npm:es-module-shims@1.7.1/dist/es-module-shims.js"></script>
+    <script async src="https://unpkg.com/es-module-shims@1.7.1/dist/es-module-shims.js"></script>
 
-    <!-- Импорт карта для Three.js -->
+    <!-- Импорт-карта с правильными версиями -->
     <script type="importmap">
     {
         "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.min.js"
+            "three": "https://unpkg.com/three@0.132.2/build/three.module.min.js",
+            "@google/model-viewer": "https://unpkg.com/@google/model-viewer@1.11.1/dist/model-viewer.min.js",
+            "@google/model-viewer-effects": "https://unpkg.com/@google/model-viewer-effects@0.4.0/dist/model-viewer-effects.min.js"
         }
     }
     </script>
 
-    <!-- Подключаем model-viewer с эффектами -->
-    <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer/dist/model-viewer-module.min.js"></script>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer-effects/dist/model-viewer-effects.min.js"></script>
-
     <!-- Основной скрипт -->
     <script type="module">
+        // Импортируем необходимые компоненты
+        import { ModelViewerElement } from '@google/model-viewer';
+        import '@google/model-viewer-effects';
+
         // Ждем загрузки компонентов
         await Promise.all([
             customElements.whenDefined('model-viewer'),
             customElements.whenDefined('effect-composer')
         ]);
 
-        const modelViewer = document.querySelector("#spring-model");
+        const modelViewer = document.querySelector("#model");
         const bloomEffect = modelViewer.querySelector('bloom-effect');
         const outlineEffect = modelViewer.querySelector('outline-effect');
-        const bloomToggle = document.querySelector("#bloom-toggle");
-        const outlineToggle = document.querySelector("#outline-toggle");
+        const bloomBtn = document.querySelector("#bloom-btn");
+        const outlineBtn = document.querySelector("#outline-btn");
 
         // Состояние эффектов
         const effectsState = {
@@ -123,38 +100,19 @@
         };
 
         // Управление Bloom
-        bloomToggle.addEventListener('click', () => {
+        bloomBtn.addEventListener('click', () => {
             effectsState.bloom = !effectsState.bloom;
             bloomEffect.blendMode = effectsState.bloom ? 'default' : 'skip';
-            bloomToggle.textContent = `Bloom: ${effectsState.bloom ? 'Вкл' : 'Выкл'}`;
-            bloomToggle.classList.toggle('active', effectsState.bloom);
+            bloomBtn.textContent = `Bloom: ${effectsState.bloom ? 'Вкл' : 'Выкл'}`;
+            bloomBtn.classList.toggle('active', effectsState.bloom);
         });
 
         // Управление Outline
-        outlineToggle.addEventListener('click', () => {
+        outlineBtn.addEventListener('click', () => {
             effectsState.outline = !effectsState.outline;
             outlineEffect.blendMode = effectsState.outline ? 'default' : 'skip';
-            outlineToggle.textContent = `Контур: ${effectsState.outline ? 'Вкл' : 'Выкл'}`;
-            outlineToggle.classList.toggle('active', effectsState.outline);
-        });
-
-        // Индикатор загрузки
-        const progressBar = modelViewer.querySelector('.progress-bar');
-        const updatingBar = modelViewer.querySelector('.update-bar');
-
-        modelViewer.addEventListener('progress', (event) => {
-            const progress = event.detail.totalProgress;
-            updatingBar.style.width = `${progress * 100}%`;
-            
-            if (progress === 1) {
-                progressBar.style.opacity = '0';
-                setTimeout(() => {
-                    progressBar.style.display = 'none';
-                }, 300);
-            } else {
-                progressBar.style.display = 'block';
-                progressBar.style.opacity = '1';
-            }
+            outlineBtn.textContent = `Outline: ${effectsState.outline ? 'Вкл' : 'Выкл'}`;
+            outlineBtn.classList.toggle('active', effectsState.outline);
         });
 
         // Обработчик ошибок
@@ -164,8 +122,8 @@
         });
 
         // Инициализация кнопок
-        bloomToggle.classList.add('active');
-        outlineToggle.classList.add('active');
+        bloomBtn.classList.add('active');
+        outlineBtn.classList.add('active');
     </script>
 </body>
 </html>
