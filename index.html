@@ -1,203 +1,96 @@
 <!doctype html>
-<html lang="ru">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Весенняя сцена с эффектами</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 20px;
-      background: #f0f0f0;
-      font-family: Arial, sans-serif;
-    }
-    model-viewer {
-      width: 100%;
-      height: 70vh;
-      margin: 0 auto;
-      background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.1);
-    }
-    .controls {
-      background: white;
-      padding: 15px;
-      border-radius: 10px;
-      margin-top: 20px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-  </style>
-</head>
-
-<body>
-  <h1>Весенняя 3D сцена с эффектами</h1>
-  
-  <!-- Полифилл для Safari -->
-  <script async src="https://ga.jspm.io/npm:es-module-shims@1.7.1/dist/es-module-shims.js"></script>
-  
-  <!-- Импорт карта для Three.js -->
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.min.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.132.2/examples/jsm/"
-    }
-  }
-  </script>
-
-  <!-- Подключаем model-viewer с эффектами -->
-  <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer/dist/model-viewer-module.min.js"></script>
-  <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer-effects/dist/model-viewer-effects.min.js"></script>
-
-  <!-- Модель с эффектами -->
-  <model-viewer 
-    id="spring-model"
-    src="Low poly spring scene3.glb" 
-    camera-controls 
-    auto-rotate
-    ar
-    shadow-intensity="1"
-    environment-image="neutral"
-    alt="3D весенняя сцена"
-  >
-    <effect-composer>
-      <!-- Все эффекты изначально выключены (blend-mode="skip") -->
-      <bloom-effect blend-mode="skip"></bloom-effect>
-      <pixelate-effect blend-mode="skip"></pixelate-effect>
-      <color-grade-effect blend-mode="skip"></color-grade-effect>
-      <outline-effect blend-mode="skip"></outline-effect>
-      <glitch-effect blend-mode="skip"></glitch-effect>
-      <ssao-effect blend-mode="skip"></ssao-effect>
-    </effect-composer>
-  </model-viewer>
-
-  <!-- Панель управления эффектами -->
-  <div class="controls">
-    <h2>Управление эффектами</h2>
-    <div id="gui-container"></div>
-  </div>
-
-  <script type="module">
-    import { GUI } from "three/addons/libs/lil-gui.module.min.js";
-    
-    // Ожидаем загрузки компонентов
-    await Promise.all([
-      customElements.whenDefined('model-viewer'),
-      customElements.whenDefined('effect-composer')
-    ]);
-    
-    const modelViewer = document.querySelector("#spring-model");
-    
-    // Настройки эффектов
-    const options = {
-      bloom: { 
-        enabled: false, 
-        strength: 1.5, 
-        threshold: 0.8, 
-        radius: 0.4 
-      },
-      pixelate: { 
-        enabled: false, 
-        granularity: 10 
-      },
-      outline: { 
-        enabled: false, 
-        color: "#ffffff", 
-        strength: 1 
-      },
-      glitch: { 
-        enabled: false, 
-        strength: 0.3 
-      },
-      ssao: { 
-        enabled: false, 
-        strength: 2 
+<html lang="en">
+  <head>
+    <title>Spring 3D Model with Animations</title>
+    <meta charset="utf-8">
+    <meta name="description" content="3D Spring model with multiple animations">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link type="text/css" href="./styles.css" rel="stylesheet"/>
+    <style>
+      /* Стили для кнопок управления анимацией */
+      .animation-controls {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10;
+        display: flex;
+        gap: 10px;
       }
-    };
-    
-    // Получаем элементы эффектов
-    const bloom = modelViewer.querySelector('bloom-effect');
-    const pixelate = modelViewer.querySelector('pixelate-effect');
-    const outline = modelViewer.querySelector('outline-effect');
-    const glitch = modelViewer.querySelector('glitch-effect');
-    const ssao = modelViewer.querySelector('ssao-effect');
-    
-    // Создаем GUI
-    const gui = new GUI({ container: document.getElementById('gui-container') });
-    
-    // Bloom эффект
-    const bloomFolder = gui.addFolder('Свечение (Bloom)');
-    bloomFolder.add(options.bloom, 'enabled').onChange(value => {
-      bloom.blendMode = value ? 'default' : 'skip';
-    });
-    bloomFolder.add(options.bloom, 'strength', 0, 3).onChange(value => {
-      bloom.strength = value;
-    });
-    bloomFolder.add(options.bloom, 'radius', 0, 1).onChange(value => {
-      bloom.radius = value;
-    });
-    bloomFolder.add(options.bloom, 'threshold', 0, 1).onChange(value => {
-      bloom.threshold = value;
-    });
-    
-    // Пикселизация
-    const pixelateFolder = gui.addFolder('Пикселизация');
-    pixelateFolder.add(options.pixelate, 'enabled').onChange(value => {
-      pixelate.blendMode = value ? 'default' : 'skip';
-    });
-    pixelateFolder.add(options.pixelate, 'granularity', 1, 30).onChange(value => {
-      pixelate.granularity = value;
-    });
-    
-    // Контур
-    const outlineFolder = gui.addFolder('Контур');
-    outlineFolder.add(options.outline, 'enabled').onChange(value => {
-      outline.blendMode = value ? 'default' : 'skip';
-    });
-    outlineFolder.add(options.outline, 'strength', 0, 5).onChange(value => {
-      outline.strength = value;
-    });
-    outlineFolder.addColor(options.outline, 'color').onChange(value => {
-      outline.color = value;
-    });
-    
-    // Глитч
-    const glitchFolder = gui.addFolder('Глитч-эффект');
-    glitchFolder.add(options.glitch, 'enabled').onChange(value => {
-      glitch.blendMode = value ? 'default' : 'skip';
-    });
-    glitchFolder.add(options.glitch, 'strength', 0, 1).onChange(value => {
-      glitch.strength = value;
-    });
-    
-    // SSAO
-    const ssaoFolder = gui.addFolder('SSAO (Тени)');
-    ssaoFolder.add(options.ssao, 'enabled').onChange(value => {
-      ssao.blendMode = value ? 'default' : 'skip';
-    });
-    ssaoFolder.add(options.ssao, 'strength', 0, 10).onChange(value => {
-      ssao.strength = value;
-    });
-    
-    // Обработчик загрузки модели
-    modelViewer.addEventListener('load', () => {
-      console.log('Модель загружена! Доступные анимации:', modelViewer.availableAnimations);
+      .animation-btn {
+        padding: 8px 16px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <model-viewer 
+      src="Low poly spring scene3.glb" 
+      ar 
+      ar-modes="webxr scene-viewer quick-look" 
+      camera-controls 
+      tone-mapping="neutral" 
+      poster="poster.webp" 
+      shadow-intensity="1" 
+      animation-name="ArmatureAction.004" 
+      id="spring-model" 
+      cross-fade-duration="500"
+      autoplay
+    >
+      <div class="progress-bar hide" slot="progress-bar">
+        <div class="update-bar"></div>
+      </div>
+      <button slot="ar-button" id="ar-button">
+        View in your space
+      </button>
+      <div id="ar-prompt">
+        <img src="ar_hand_prompt.png">
+      </div>
       
-      // Автопереключение анимаций (если есть)
-      if (modelViewer.availableAnimations && modelViewer.availableAnimations.length > 1) {
-        let index = 0;
-        setInterval(() => {
-          index = (index + 1) % modelViewer.availableAnimations.length;
-          modelViewer.animationName = modelViewer.availableAnimations[index];
-        }, 5000);
-      }
-    });
+      <!-- Кнопки управления анимацией -->
+      <div class="animation-controls">
+        <button class="animation-btn" data-animation="ArmatureAction.004">Animation 1</button>
+        <button class="animation-btn" data-animation="Branch.002Action">Animation 2</button>
+      </div>
+    </model-viewer>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const modelViewer = document.querySelector('#spring-model');
+        const animationButtons = document.querySelectorAll('.animation-btn');
+        
+        // Автоматическое переключение анимаций каждые 5 секунд
+        let animationIndex = 0;
+        const animations = ['ArmatureAction.004', 'Branch.002Action'];
+        
+        function cycleAnimations() {
+          animationIndex = (animationIndex + 1) % animations.length;
+          modelViewer.animationName = animations[animationIndex];
+        }
+        
+        // Запускаем цикл анимаций
+        let animationInterval = setInterval(cycleAnimations, 5000);
+        
+        // Ручное управление анимациями через кнопки
+        animationButtons.forEach(button => {
+          button.addEventListener('click', () => {
+            clearInterval(animationInterval); // Останавливаем автоцикл
+            modelViewer.animationName = button.dataset.animation;
+          });
+        });
+        
+        // Получаем список доступных анимаций после загрузки модели
+        modelViewer.addEventListener('load', () => {
+          console.log('Available animations:', modelViewer.availableAnimations);
+        });
+      });
+    </script>
     
-    // Обработчик ошибок
-    modelViewer.addEventListener('error', (event) => {
-      console.error('Ошибка загрузки модели:', event.detail);
-      alert('Ошибка загрузки модели. Проверьте консоль для подробностей.');
-    });
-  </script>
-</body>
-</html>
+    <!-- Loads <model-viewer> for browsers: -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+
+    
