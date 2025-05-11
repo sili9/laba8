@@ -1,13 +1,54 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <title>Spring 3D Model with Animations & Effects</title>
+    <title>Spring 3D Model with Effects</title>
     <meta charset="utf-8">
-    <meta name="description" content="3D Spring model with animations and post-processing">
+    <meta name="description" content="3D Spring model with pixelation effect">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-      /* Стили для кнопок управления анимацией */
-      .animation-controls {
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: #000;
+      }
+      
+      model-viewer {
+        width: 100vw;
+        height: 100vh;
+        --poster-color: transparent;
+        --progress-bar-color: transparent;
+      }
+      
+      /* Контейнер для эффектов */
+      #model-container {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+      }
+      
+      /* Эффект пикселизации */
+      .pixelate {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: inherit;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      
+      /* Эффект свечения */
+      .bloom-effect {
+        filter: brightness(1.2) contrast(1.1) drop-shadow(0 0 8px rgba(255,255,255,0.6));
+      }
+      
+      /* Кнопки управления */
+      .controls {
         position: absolute;
         bottom: 20px;
         left: 50%;
@@ -16,82 +57,113 @@
         display: flex;
         gap: 10px;
       }
-      .animation-btn {
-        padding: 8px 16px;
-        background: rgba(0,0,0,0.7);
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-      }
       
-      /* Стили для кнопок эффектов */
-      .effects-controls {
-        position: absolute;
-        bottom: 70px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 10;
-        display: flex;
-        gap: 10px;
-      }
-      .effect-btn {
+      .control-btn {
         padding: 8px 16px;
         background: rgba(0,0,0,0.7);
         color: white;
         border: none;
         border-radius: 4px;
         cursor: pointer;
-      }
-      model-viewer {
-        width: 100%;
-        height: 600px;
+        font-family: Arial, sans-serif;
       }
     </style>
-    <!-- Загружаем model-viewer из надежного источника -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
   </head>
   <body>
-    <model-viewer 
-      src="Low poly spring scene3.glb" 
-      ar 
-      ar-modes="webxr scene-viewer quick-look" 
-      camera-controls 
-      tone-mapping="neutral" 
-      poster="poster.webp" 
-      shadow-intensity="1" 
-      animation-name="ArmatureAction.004" 
-      id="spring-model" 
-      cross-fade-duration="500"
-      autoplay
-      exposure="1.2"
-      environment-image="neutral"
-    >
-      <div class="progress-bar hide" slot="progress-bar">
-        <div class="update-bar"></div>
-      </div>
-      <button slot="ar-button" id="ar-button">
-        View in your space
-      </button>
-      <div id="ar-prompt">
-        <img src="ar_hand_prompt.png">
-      </div>
-      
-      <!-- Кнопки управления анимацией -->
-      <div class="animation-controls">
-        <button class="animation-btn" data-animation="ArmatureAction.004">Animation 1</button>
-        <button class="animation-btn" data-animation="Branch.002Action">Animation 2</button>
-        <button class="animation-btn" id="auto-cycle-btn">Auto Cycle</button>
-      </div>
-    </model-viewer>
+    <div id="model-container">
+      <model-viewer 
+        src="Low poly spring scene3.glb" 
+        camera-controls 
+        tone-mapping="neutral" 
+        shadow-intensity="1" 
+        animation-name="ArmatureAction.004" 
+        id="spring-model" 
+        cross-fade-duration="500"
+        autoplay
+        exposure="1.2"
+        environment-image="neutral"
+        auto-rotate
+        class="bloom-effect"
+      >
+      </model-viewer>
+      <canvas id="pixelate-effect" class="pixelate"></canvas>
+    </div>
+
+    <div class="controls">
+      <button class="control-btn" data-animation="ArmatureAction.004">Animation 1</button>
+      <button class="control-btn" data-animation="Branch.002Action">Animation 2</button>
+      <button class="control-btn" id="pixel-btn">Pixel Effect</button>
+      <button class="control-btn" id="bloom-btn">Bloom Effect</button>
+    </div>
 
     <script type="module">
       // Ждем загрузки model-viewer
       await customElements.whenDefined('model-viewer');
       
       const modelViewer = document.querySelector('#spring-model');
+      const pixelEffect = document.querySelector('#pixelate-effect');
+      const pixelBtn = document.querySelector('#pixel-btn');
+      const bloomBtn = document.querySelector('#bloom-btn');
       let animationInterval;
+      let pixelActive = false;
+      let bloomActive = true;
       const animations = ['ArmatureAction.004', 'Branch.002Action'];
+      
+      // Настройка пиксельного эффекта
+      function setupPixelEffect() {
+        const canvas = pixelEffect;
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('model-container');
+        
+        canvas.width = container.offsetWidth;
+        canvas.height = container.offsetHeight;
+        
+        function drawPixelated() {
+          if (!pixelActive) return;
+          
+          // Получаем текущее изображение из model-viewer
+          const model = document.querySelector('model-viewer');
+          const viewport = model.shadowRoot.querySelector('.viewport');
+          const canvas3D = viewport.querySelector('canvas');
+          
+          // Устанавливаем размеры
+          canvas.width = canvas3D.width / 4;
+          canvas.height = canvas3D.height / 4;
+          
+          // Рисуем уменьшенное изображение
+          ctx.drawImage(canvas3D, 0, 0, canvas.width, canvas.height);
+          
+          // Увеличиваем обратно с пикселизацией
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 
+                        0, 0, container.offsetWidth, container.offsetHeight);
+          
+          requestAnimationFrame(drawPixelated);
+        }
+        
+        // Обработчик изменения размера
+        window.addEventListener('resize', () => {
+          canvas.width = container.offsetWidth;
+          canvas.height = container.offsetHeight;
+        });
+        
+        drawPixelated();
+      }
+      
+      // Переключение пиксельного эффекта
+      function togglePixelEffect() {
+        pixelActive = !pixelActive;
+        pixelEffect.style.opacity = pixelActive ? 1 : 0;
+        pixelBtn.textContent = pixelActive ? 'Disable Pixel' : 'Pixel Effect';
+      }
+      
+      // Переключение эффекта свечения
+      function toggleBloomEffect() {
+        bloomActive = !bloomActive;
+        modelViewer.classList.toggle('bloom-effect', bloomActive);
+        bloomBtn.textContent = bloomActive ? 'Disable Bloom' : 'Bloom Effect';
+      }
       
       // Автоматическое переключение анимаций
       function cycleAnimations() {
@@ -100,49 +172,32 @@
         modelViewer.animationName = animations[nextIndex];
       }
       
-      // Запуск автоцикла
-      function startAutoCycle() {
-        clearInterval(animationInterval);
-        animationInterval = setInterval(cycleAnimations, 5000);
-        document.getElementById('auto-cycle-btn').textContent = "Auto Cycle (ON)";
-      }
-      
-      // Остановка автоцикла
-      function stopAutoCycle() {
-        clearInterval(animationInterval);
-        document.getElementById('auto-cycle-btn').textContent = "Auto Cycle (OFF)";
-      }
-      
-      // Инициализация после загрузки
+      // Инициализация
       document.addEventListener('DOMContentLoaded', () => {
-        const animationButtons = document.querySelectorAll('.animation-btn');
+        // Настройка эффектов
+        setupPixelEffect();
         
-        // Ручное управление анимациями
-        animationButtons.forEach(button => {
-          if(button.dataset.animation) {
-            button.addEventListener('click', () => {
-              stopAutoCycle();
-              modelViewer.animationName = button.dataset.animation;
-            });
-          }
+        // Кнопки управления анимациями
+        document.querySelectorAll('.control-btn[data-animation]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            modelViewer.animationName = btn.dataset.animation;
+          });
         });
         
-        // Управление автоциклом
-        document.getElementById('auto-cycle-btn').addEventListener('click', (e) => {
-          if (animationInterval) {
-            stopAutoCycle();
-          } else {
-            startAutoCycle();
-          }
-        });
+        // Кнопки эффектов
+        pixelBtn.addEventListener('click', togglePixelEffect);
+        bloomBtn.addEventListener('click', toggleBloomEffect);
         
-        // Получаем список доступных анимаций
+        // Центрирование модели
         modelViewer.addEventListener('load', () => {
-          console.log('Available animations:', modelViewer.availableAnimations);
+          modelViewer.cameraOrbit = '0deg 75deg 105%';
+          modelViewer.addEventListener('camera-change', () => {
+            modelViewer.cameraOrbit = '0deg 75deg 105%';
+          });
         });
         
-        // Стартуем автоцикл по умолчанию
-        startAutoCycle();
+        // Запуск автоцикла анимаций
+        animationInterval = setInterval(cycleAnimations, 5000);
       });
     </script>
   </body>
