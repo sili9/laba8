@@ -1,40 +1,29 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
   <head>
-    <title>3D Модель весны с анимациями и эффектами</title>
+    <title>Spring 3D Model with Animations</title>
     <meta charset="utf-8">
-    <meta name="description" content="3D модель весны с анимациями и эффектами пост-обработки">
+    <meta name="description" content="3D Spring model with multiple animations">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link type="text/css" href="./styles.css" rel="stylesheet"/>
     <style>
-      /* Стили для кнопок */
-      .controls-container {
+      /* Стили для кнопок управления анимацией */
+      .animation-controls {
         position: absolute;
         bottom: 20px;
         left: 50%;
         transform: translateX(-50%);
         z-index: 10;
         display: flex;
-        flex-direction: column;
-        gap: 10px;
-        align-items: center;
-      }
-      .controls-group {
-        display: flex;
         gap: 10px;
       }
-      .control-btn {
+      .animation-btn {
         padding: 8px 16px;
         background: rgba(0,0,0,0.7);
         color: white;
         border: none;
         border-radius: 4px;
         cursor: pointer;
-        font-size: 14px;
-      }
-      .control-btn.active {
-        background: rgba(255,165,0,0.8);
-        color: black;
       }
     </style>
   </head>
@@ -56,143 +45,25 @@
         <div class="update-bar"></div>
       </div>
       <button slot="ar-button" id="ar-button">
-        Просмотр в AR
+        View in your space
       </button>
       <div id="ar-prompt">
         <img src="ar_hand_prompt.png">
       </div>
       
-      <!-- Группа управления эффектами -->
-      <div class="controls-container">
-        <div class="controls-group">
-          <button class="control-btn" data-effect="bloom">Эффект свечения</button>
-          <button class="control-btn" data-effect="sepia">Сепия</button>
-          <button class="control-btn" data-effect="none">Без эффектов</button>
-        </div>
-        
-        <!-- Группа управления анимациями -->
-        <div class="controls-group">
-          <button class="control-btn" data-animation="ArmatureAction.004">Анимация 1</button>
-          <button class="control-btn" data-animation="Branch.002Action">Анимация 2</button>
-        </div>
+      <!-- Кнопки управления анимацией -->
+      <div class="animation-controls">
+        <button class="animation-btn" data-animation="ArmatureAction.004">Animation 1</button>
+        <button class="animation-btn" data-animation="Branch.002Action">Animation 2</button>
       </div>
     </model-viewer>
 
-    <!-- Подключаем библиотеки для пост-обработки -->
-    <script src="https://unpkg.com/three@0.132.2/build/three.min.js"></script>
-    <script src="https://unpkg.com/three@0.132.2/examples/js/postprocessing/EffectComposer.js"></script>
-    <script src="https://unpkg.com/three@0.132.2/examples/js/postprocessing/RenderPass.js"></script>
-    <script src="https://unpkg.com/three@0.132.2/examples/js/postprocessing/ShaderPass.js"></script>
-    <script src="https://unpkg.com/three@0.132.2/examples/js/postprocessing/UnrealBloomPass.js"></script>
-    <script src="https://unpkg.com/three@0.132.2/examples/js/shaders/CopyShader.js"></script>
-
-    <script type="module">
-      document.addEventListener('DOMContentLoaded', async () => {
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
         const modelViewer = document.querySelector('#spring-model');
-        const animationButtons = document.querySelectorAll('[data-animation]');
-        const effectButtons = document.querySelectorAll('[data-effect]');
+        const animationButtons = document.querySelectorAll('.animation-btn');
         
-        // Ждем загрузки model-viewer
-        await customElements.whenDefined('model-viewer');
-        
-        // Настройка пост-обработки
-        let composer = null;
-        let bloomPass = null;
-        let sepiaPass = null;
-        
-        // Инициализация эффектов
-        function initEffects() {
-          const {three} = modelViewer;
-          
-          // Эффект свечения (Bloom)
-          bloomPass = new THREE.UnrealBloomPass(
-            new THREE.Vector2(window.innerWidth, window.innerHeight),
-            1.2,   // интенсивность
-            0.4,   // радиус
-            0.8    // порог яркости
-          );
-          
-          // Сепия эффект
-          const sepiaShader = {
-            uniforms: {
-              tDiffuse: { value: null },
-              amount: { value: 0.6 }
-            },
-            vertexShader: `
-              varying vec2 vUv;
-              void main() {
-                vUv = uv;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-              }
-            `,
-            fragmentShader: `
-              uniform sampler2D tDiffuse;
-              uniform float amount;
-              varying vec2 vUv;
-              void main() {
-                vec4 color = texture2D(tDiffuse, vUv);
-                float r = color.r;
-                float g = color.g;
-                float b = color.b;
-                color.r = min(1.0, (r * 0.393) + (g * 0.769) + (b * 0.189));
-                color.g = min(1.0, (r * 0.349) + (g * 0.686) + (b * 0.168));
-                color.b = min(1.0, (r * 0.272) + (g * 0.534) + (b * 0.131));
-                gl_FragColor = vec4(mix(texture2D(tDiffuse, vUv).rgb, color.rgb, amount), color.a);
-              }
-            `
-          };
-          sepiaPass = new THREE.ShaderPass(sepiaShader);
-          
-          // Создаем композитор
-          composer = new THREE.EffectComposer(three.renderer);
-          composer.addPass(new THREE.RenderPass(three.scene, three.camera));
-          
-          // Устанавливаем цикл рендеринга
-          three.renderer.setAnimationLoop(() => {
-            composer.render();
-          });
-        }
-        
-        // Применение выбранного эффекта
-        function applyEffect(effect) {
-          if (!composer) initEffects();
-          
-          // Удаляем все эффекты кроме основного рендера
-          while (composer.passes.length > 1) {
-            composer.removePass(composer.passes[1]);
-          }
-          
-          // Добавляем выбранный эффект
-          switch(effect) {
-            case 'bloom':
-              composer.addPass(bloomPass);
-              break;
-            case 'sepia':
-              composer.addPass(sepiaPass);
-              break;
-          }
-          
-          // Добавляем финальный проход для вывода на экран
-          const copyPass = new THREE.ShaderPass(THREE.CopyShader);
-          copyPass.renderToScreen = true;
-          composer.addPass(copyPass);
-        }
-        
-        // Обработчики для кнопок эффектов
-        effectButtons.forEach(button => {
-          button.addEventListener('click', () => {
-            const effect = button.dataset.effect;
-            applyEffect(effect);
-            
-            // Обновляем состояние кнопок
-            effectButtons.forEach(btn => btn.classList.remove('active'));
-            if (effect !== 'none') {
-              button.classList.add('active');
-            }
-          });
-        });
-        
-        // Автопереключение анимаций
+        // Автоматическое переключение анимаций каждые 5 секунд
         let animationIndex = 0;
         const animations = ['ArmatureAction.004', 'Branch.002Action'];
         
@@ -201,19 +72,23 @@
           modelViewer.animationName = animations[animationIndex];
         }
         
+        // Запускаем цикл анимаций
         let animationInterval = setInterval(cycleAnimations, 5000);
         
-        // Ручное управление анимациями
+        // Ручное управление анимациями через кнопки
         animationButtons.forEach(button => {
           button.addEventListener('click', () => {
-            clearInterval(animationInterval);
+            clearInterval(animationInterval); // Останавливаем автоцикл
             modelViewer.animationName = button.dataset.animation;
           });
+        });
+        
+        // Получаем список доступных анимаций после загрузки модели
+        modelViewer.addEventListener('load', () => {
+          console.log('Available animations:', modelViewer.availableAnimations);
         });
       });
     </script>
     
-    <!-- Основная библиотека model-viewer -->
+    <!-- Loads <model-viewer> for browsers: -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
-  </body>
-</html>
