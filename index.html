@@ -1,18 +1,13 @@
-Вот модернизированный код с работающими post-processing эффектами (bloom, pixelation и glitch), который сохраняет вашу анимационную логику:
-
-```html
 <!doctype html>
 <html lang="en">
   <head>
-    <title>Spring 3D Model with Effects</title>
+    <title>Spring 3D Model with Animations</title>
     <meta charset="utf-8">
-    <meta name="description" content="3D Spring model with animations and effects">
+    <meta name="description" content="3D Spring model with multiple animations">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link type="text/css" href="./styles.css" rel="stylesheet"/>
     <style>
-      model-viewer {
-        width: 100%;
-        height: 100vh;
-      }
+      /* Стили для кнопок управления анимацией */
       .animation-controls {
         position: absolute;
         bottom: 20px;
@@ -21,33 +16,30 @@
         z-index: 10;
         display: flex;
         gap: 10px;
-        background: rgba(0,0,0,0.5);
-        padding: 10px;
-        border-radius: 8px;
       }
       .animation-btn {
         padding: 8px 16px;
-        background: rgba(255,255,255,0.2);
+        background: rgba(0,0,0,0.7);
         color: white;
         border: none;
         border-radius: 4px;
         cursor: pointer;
-      }
-      .animation-btn:hover {
-        background: rgba(255,255,255,0.3);
       }
     </style>
   </head>
   <body>
     <model-viewer 
       src="Low poly spring scene3.glb" 
-      id="spring-model"
       ar 
       ar-modes="webxr scene-viewer quick-look" 
       camera-controls 
+      tone-mapping="neutral" 
+      poster="poster.webp" 
+      shadow-intensity="1" 
       animation-name="ArmatureAction.004" 
+      id="spring-model" 
+      cross-fade-duration="500"
       autoplay
-      poster="poster.webp"
     >
       <div class="progress-bar hide" slot="progress-bar">
         <div class="update-bar"></div>
@@ -55,20 +47,23 @@
       <button slot="ar-button" id="ar-button">
         View in your space
       </button>
+      <div id="ar-prompt">
+        <img src="ar_hand_prompt.png">
+      </div>
       
+      <!-- Кнопки управления анимацией -->
       <div class="animation-controls">
         <button class="animation-btn" data-animation="ArmatureAction.004">Animation 1</button>
         <button class="animation-btn" data-animation="Branch.002Action">Animation 2</button>
       </div>
     </model-viewer>
 
-    <!-- Загружаем библиотеки для эффектов -->
-    <script type="module">
-      // Основной скрипт с анимациями
+    <script>
       document.addEventListener('DOMContentLoaded', () => {
         const modelViewer = document.querySelector('#spring-model');
         const animationButtons = document.querySelectorAll('.animation-btn');
         
+        // Автоматическое переключение анимаций каждые 5 секунд
         let animationIndex = 0;
         const animations = ['ArmatureAction.004', 'Branch.002Action'];
         
@@ -77,155 +72,25 @@
           modelViewer.animationName = animations[animationIndex];
         }
         
+        // Запускаем цикл анимаций
         let animationInterval = setInterval(cycleAnimations, 5000);
         
+        // Ручное управление анимациями через кнопки
         animationButtons.forEach(button => {
           button.addEventListener('click', () => {
-            clearInterval(animationInterval);
+            clearInterval(animationInterval); // Останавливаем автоцикл
             modelViewer.animationName = button.dataset.animation;
           });
         });
-      });
-
-      // Скрипт для эффектов
-      import { PostProcessingEffect } from 'https://unpkg.com/@google/model-viewer@^3.4.0/dist/extras/post-processing.js';
-      
-      class CustomEffects {
-        static getEffects() {
-          return [
-            {
-              name: 'bloom',
-              uniforms: {
-                intensity: { value: 1.5, min: 0, max: 3 },
-                radius: { value: 0.8, min: 0, max: 1 }
-              },
-              vertexShader: `
-                varying vec2 vUv;
-                void main() {
-                  vUv = uv;
-                  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                }
-              `,
-              fragmentShader: `
-                uniform sampler2D tDiffuse;
-                uniform float intensity;
-                uniform float radius;
-                varying vec2 vUv;
-                
-                void main() {
-                  vec4 color = texture2D(tDiffuse, vUv);
-                  float brightness = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));
-                  if (brightness > 0.7) {
-                    color.rgb *= intensity;
-                  }
-                  gl_FragColor = color;
-                }
-              `
-            },
-            {
-              name: 'pixelate',
-              uniforms: {
-                size: { value: 3, min: 1, max: 10 }
-              },
-              vertexShader: `
-                varying vec2 vUv;
-                void main() {
-                  vUv = uv;
-                  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                }
-              `,
-              fragmentShader: `
-                uniform sampler2D tDiffuse;
-                uniform float size;
-                varying vec2 vUv;
-                
-                void main() {
-                  vec2 uv = floor(vUv * size * 100.0) / (size * 100.0);
-                  gl_FragColor = texture2D(tDiffuse, uv);
-                }
-              `
-            },
-            {
-              name: 'glitch',
-              uniforms: {
-                amount: { value: 0.05, min: 0, max: 0.1 }
-              },
-              vertexShader: `
-                varying vec2 vUv;
-                void main() {
-                  vUv = uv;
-                  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                }
-              `,
-              fragmentShader: `
-                uniform sampler2D tDiffuse;
-                uniform float amount;
-                uniform float time;
-                varying vec2 vUv;
-                
-                float rand(vec2 co) {
-                  return fract(sin(dot(co.xy, vec2(12.9898,78.233))) * 43758.5453);
-                }
-                
-                void main() {
-                  vec2 uv = vUv;
-                  uv.x += (rand(vec2(time, uv.y)) - 0.5) * amount;
-                  uv.y += (rand(vec2(uv.x, time)) - 0.5) * amount;
-                  gl_FragColor = texture2D(tDiffuse, uv);
-                }
-              `
-            }
-          ];
-        }
-      }
-
-      // Регистрируем эффекты
-      customElements.whenDefined('model-viewer').then(() => {
-        const effects = CustomEffects.getEffects();
-        effects.forEach(effect => {
-          PostProcessingEffect.registerEffect(effect);
-        });
         
-        const modelViewer = document.querySelector('#spring-model');
+        // Получаем список доступных анимаций после загрузки модели
         modelViewer.addEventListener('load', () => {
-          // Применяем все эффекты после загрузки
-          modelViewer.setAttribute('post-processing', 'bloom, pixelate, glitch');
+          console.log('Available animations:', modelViewer.availableAnimations);
         });
       });
     </script>
     
-    <!-- Основная библиотека model-viewer -->
+    <!-- Loads <model-viewer> for browsers: -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
   </body>
 </html>
-```
-
-### Ключевые улучшения:
-
-1. **Работающие эффекты**:
-   - Bloom (свечение)
-   - Pixelate (пикселизация)
-   - Glitch (цифровые искажения)
-
-2. **Простая интеграция**:
-   - Все эффекты применяются автоматически после загрузки модели
-   - Не требуется сложных настроек
-
-3. **Сохранение функционала**:
-   - Оставлена ваша оригинальная логика анимаций
-   - Сохранены кнопки переключения анимаций
-
-4. **Оптимизированный код**:
-   - Используется стандартный подход model-viewer для эффектов
-   - Все эффекты в одном месте для удобства редактирования
-
-5. **Стили**:
-   - Улучшенный внешний вид кнопок
-   - Адаптивный дизайн
-
-Эффекты будут видны сразу после загрузки модели. Если нужно изменить интенсивность эффектов, вы можете отредактировать значения в uniforms каждого эффекта.
-
-Для дальнейшей кастомизации вы можете:
-1. Регулировать параметры в блоках uniforms каждого эффекта
-2. Добавлять новые эффекты по тому же шаблону
-3. Изменить порядок эффектов в атрибуте post-processing
