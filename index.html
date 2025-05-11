@@ -48,9 +48,8 @@
         height: 600px;
       }
     </style>
-    <!-- Load model-viewer with post-processing -->
-    <script type="module" src="https://unpkg.com/@google/model-viewer@^3.4.0/dist/model-viewer.min.js"></script>
-    <script type="module" src="https://unpkg.com/@google/model-viewer@^3.4.0/dist/extras/post-processing/library.js"></script>
+    <!-- Загружаем model-viewer из надежного источника -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
   </head>
   <body>
     <model-viewer 
@@ -78,50 +77,62 @@
         <img src="ar_hand_prompt.png">
       </div>
       
-      <!-- Кнопки управления эффектами -->
-      <div class="effects-controls">
-        <button class="effect-btn" onclick="applyBloom()">Bloom</button>
-        <button class="effect-btn" onclick="applyVignette()">Vignette</button>
-        <button class="effect-btn" onclick="clearEffects()">Clear Effects</button>
-      </div>
-      
       <!-- Кнопки управления анимацией -->
       <div class="animation-controls">
         <button class="animation-btn" data-animation="ArmatureAction.004">Animation 1</button>
         <button class="animation-btn" data-animation="Branch.002Action">Animation 2</button>
-        <button class="animation-btn" onclick="startAutoCycle()">Auto Cycle</button>
+        <button class="animation-btn" id="auto-cycle-btn">Auto Cycle</button>
       </div>
     </model-viewer>
 
-    <script>
+    <script type="module">
+      // Ждем загрузки model-viewer
+      await customElements.whenDefined('model-viewer');
+      
       const modelViewer = document.querySelector('#spring-model');
       let animationInterval;
+      const animations = ['ArmatureAction.004', 'Branch.002Action'];
+      
+      // Автоматическое переключение анимаций
+      function cycleAnimations() {
+        let currentIndex = animations.indexOf(modelViewer.animationName);
+        let nextIndex = (currentIndex + 1) % animations.length;
+        modelViewer.animationName = animations[nextIndex];
+      }
+      
+      // Запуск автоцикла
+      function startAutoCycle() {
+        clearInterval(animationInterval);
+        animationInterval = setInterval(cycleAnimations, 5000);
+        document.getElementById('auto-cycle-btn').textContent = "Auto Cycle (ON)";
+      }
+      
+      // Остановка автоцикла
+      function stopAutoCycle() {
+        clearInterval(animationInterval);
+        document.getElementById('auto-cycle-btn').textContent = "Auto Cycle (OFF)";
+      }
       
       // Инициализация после загрузки
       document.addEventListener('DOMContentLoaded', () => {
         const animationButtons = document.querySelectorAll('.animation-btn');
         
-        // Автоматическое переключение анимаций
-        function cycleAnimations() {
-          const animations = ['ArmatureAction.004', 'Branch.002Action'];
-          let currentIndex = animations.indexOf(modelViewer.animationName);
-          let nextIndex = (currentIndex + 1) % animations.length;
-          modelViewer.animationName = animations[nextIndex];
-        }
-        
-        // Запуск автоцикла
-        function startAutoCycle() {
-          clearInterval(animationInterval);
-          animationInterval = setInterval(cycleAnimations, 5000);
-        }
-        
         // Ручное управление анимациями
         animationButtons.forEach(button => {
           if(button.dataset.animation) {
             button.addEventListener('click', () => {
-              clearInterval(animationInterval);
+              stopAutoCycle();
               modelViewer.animationName = button.dataset.animation;
             });
+          }
+        });
+        
+        // Управление автоциклом
+        document.getElementById('auto-cycle-btn').addEventListener('click', (e) => {
+          if (animationInterval) {
+            stopAutoCycle();
+          } else {
+            startAutoCycle();
           }
         });
         
@@ -133,26 +144,6 @@
         // Стартуем автоцикл по умолчанию
         startAutoCycle();
       });
-      
-      // Post-Processing Effects
-      function applyBloom() {
-        modelViewer.createEffect("bloom", {
-          intensity: 1.5,
-          radius: 0.8,
-          threshold: 0.4,
-        });
-      }
-      
-      function applyVignette() {
-        modelViewer.createEffect("vignette", {
-          darkness: 0.7,
-          offset: 0.4,
-        });
-      }
-      
-      function clearEffects() {
-        modelViewer.clearEffects();
-      }
     </script>
   </body>
 </html>
