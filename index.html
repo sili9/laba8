@@ -1,35 +1,60 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <title>Spring 3D Model with Animations</title>
+    <title>Spring 3D Model with Animations & Effects</title>
     <meta charset="utf-8">
-    <meta name="description" content="3D Spring model with multiple animations">
+    <meta name="description" content="3D Spring model with animations and post-processing">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link type="text/css" href="./styles.css" rel="stylesheet"/>
     <style>
-      /* Стили для кнопок управления анимацией */
-      .animation-controls {
+      /* Стили для кнопок управления */
+      .controls {
         position: absolute;
         bottom: 20px;
         left: 50%;
         transform: translateX(-50%);
         z-index: 10;
         display: flex;
+        flex-direction: column;
+        gap: 10px;
+        background: rgba(0,0,0,0.5);
+        padding: 15px;
+        border-radius: 8px;
+      }
+      .control-group {
+        display: flex;
         gap: 10px;
       }
-      .animation-btn {
+      .control-btn {
         padding: 8px 16px;
-        background: rgba(0,0,0,0.7);
+        background: rgba(255,255,255,0.2);
         color: white;
         border: none;
         border-radius: 4px;
         cursor: pointer;
+        transition: background 0.3s;
+      }
+      .control-btn:hover {
+        background: rgba(255,255,255,0.4);
+      }
+      .control-btn.active {
+        background: #4285f4;
+      }
+      .slider-container {
+        color: white;
+        margin-top: 5px;
+      }
+      .slider-container label {
+        display: block;
+        margin-bottom: 5px;
       }
     </style>
   </head>
   <body>
+    <!-- Модель с эффектами постобработки -->
     <model-viewer 
       src="Low poly spring scene3.glb" 
+      id="spring-model"
       ar 
       ar-modes="webxr scene-viewer quick-look" 
       camera-controls 
@@ -37,9 +62,9 @@
       poster="poster.webp" 
       shadow-intensity="1" 
       animation-name="ArmatureAction.004" 
-      id="spring-model" 
       cross-fade-duration="500"
       autoplay
+      post-processing
     >
       <div class="progress-bar hide" slot="progress-bar">
         <div class="update-bar"></div>
@@ -51,46 +76,169 @@
         <img src="ar_hand_prompt.png">
       </div>
       
-      <!-- Кнопки управления анимацией -->
-      <div class="animation-controls">
-        <button class="animation-btn" data-animation="ArmatureAction.004">Animation 1</button>
-        <button class="animation-btn" data-animation="Branch.002Action">Animation 2</button>
+      <!-- Панель управления -->
+      <div class="controls">
+        <div class="control-group">
+          <button class="control-btn" data-animation="ArmatureAction.004">Animation 1</button>
+          <button class="control-btn" data-animation="Branch.002Action">Animation 2</button>
+        </div>
+        
+        <div class="control-group">
+          <button class="control-btn" data-effect="bloom">Bloom</button>
+          <button class="control-btn" data-effect="pixelated">Pixelated</button>
+          <button class="control-btn" data-effect="glitch">Glitch</button>
+        </div>
+        
+        <div class="slider-container" id="bloom-controls">
+          <label for="bloom-intensity">Bloom Intensity</label>
+          <input type="range" id="bloom-intensity" min="0" max="2" step="0.1" value="0.5">
+        </div>
+        
+        <div class="slider-container" id="pixelated-controls">
+          <label for="pixelated-size">Pixel Size</label>
+          <input type="range" id="pixelated-size" min="1" max="10" step="1" value="3">
+        </div>
       </div>
     </model-viewer>
 
+    <!-- Загружаем дополнительные скрипты для эффектов -->
+    <script type="module">
+      import { EffectComposer } from 'https://unpkg.com/three@0.126.0/examples/jsm/postprocessing/EffectComposer.js';
+      import { RenderPass } from 'https://unpkg.com/three@0.126.0/examples/jsm/postprocessing/RenderPass.js';
+      import { GlitchPass } from 'https://unpkg.com/three@0.126.0/examples/jsm/postprocessing/GlitchPass.js';
+      import { BloomPass } from 'https://unpkg.com/three@0.126.0/examples/jsm/postprocessing/BloomPass.js';
+      import { PixelShader } from 'https://unpkg.com/three@0.126.0/examples/jsm/shaders/PixelShader.js';
+      import { ShaderPass } from 'https://unpkg.com/three@0.126.0/examples/jsm/postprocessing/ShaderPass.js';
+      
+      // Создаем кастомный пиксельный эффект
+      const pixelateEffect = {
+        uniforms: {
+          tDiffuse: { value: null },
+          size: { value: 3 }
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform sampler2D tDiffuse;
+          uniform float size;
+          varying vec2 vUv;
+          
+          void main() {
+            vec2 uv = floor(vUv * size * 100.0) / (size * 100.0);
+            gl_FragColor = texture2D(tDiffuse, uv);
+          }
+        `
+      };
+    </script>
+
     <script>
-      document.addEventListener('DOMContentLoaded', () => {
+      document.addEventListener('DOMContentLoaded', async () => {
         const modelViewer = document.querySelector('#spring-model');
-        const animationButtons = document.querySelectorAll('.animation-btn');
+        const animationButtons = document.querySelectorAll('[data-animation]');
+        const effectButtons = document.querySelectorAll('[data-effect]');
+        const bloomIntensity = document.getElementById('bloom-intensity');
+        const pixelatedSize = document.getElementById('pixelated-size');
         
-        // Автоматическое переключение анимаций каждые 5 секунд
-        let animationIndex = 0;
-        const animations = ['ArmatureAction.004', 'Branch.002Action'];
+        // Ждем загрузки модели и компонентов
+        await customElements.whenDefined('model-viewer');
         
-        function cycleAnimations() {
-          animationIndex = (animationIndex + 1) % animations.length;
-          modelViewer.animationName = animations[animationIndex];
-        }
+        // Инициализация эффектов
+        let composer, glitchPass, bloomPass, pixelatePass;
+        let activeEffects = {
+          bloom: false,
+          pixelated: false,
+          glitch: false
+        };
         
-        // Запускаем цикл анимаций
-        let animationInterval = setInterval(cycleAnimations, 5000);
+        modelViewer.addEventListener('load', () => {
+          const renderer = modelViewer.renderer;
+          const scene = modelViewer.scene;
+          const camera = modelViewer.camera;
+          
+          // Создаем композитор эффектов
+          composer = new EffectComposer(renderer);
+          composer.addPass(new RenderPass(scene, camera));
+          
+          // Инициализируем эффекты
+          glitchPass = new GlitchPass();
+          bloomPass = new BloomPass(0.5, 25, 4, 256);
+          pixelatePass = new ShaderPass(pixelateEffect);
+          
+          // Настройка рендеринга с эффектами
+          const originalRender = modelViewer.render;
+          modelViewer.render = (timestamp, frame) => {
+            originalRender.call(modelViewer, timestamp, frame);
+            
+            if (Object.values(activeEffects).some(e => e)) {
+              composer.render();
+            }
+          };
+        });
         
-        // Ручное управление анимациями через кнопки
-        animationButtons.forEach(button => {
-          button.addEventListener('click', () => {
-            clearInterval(animationInterval); // Останавливаем автоцикл
-            modelViewer.animationName = button.dataset.animation;
+        // Управление анимациями
+        let animationInterval = setInterval(() => {
+          const currentAnim = modelViewer.animationName;
+          modelViewer.animationName = currentAnim === 'ArmatureAction.004' 
+            ? 'Branch.002Action' 
+            : 'ArmatureAction.004';
+        }, 5000);
+        
+        animationButtons.forEach(btn => {
+          btn.addEventListener('click', () => {
+            clearInterval(animationInterval);
+            modelViewer.animationName = btn.dataset.animation;
+            animationButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
           });
         });
         
-        // Получаем список доступных анимаций после загрузки модели
-        modelViewer.addEventListener('load', () => {
-          console.log('Available animations:', modelViewer.availableAnimations);
+        // Управление эффектами
+        effectButtons.forEach(btn => {
+          btn.addEventListener('click', () => {
+            const effect = btn.dataset.effect;
+            activeEffects[effect] = !activeEffects[effect];
+            
+            // Добавляем/удаляем эффекты
+            switch(effect) {
+              case 'bloom':
+                if (activeEffects.bloom) composer.addPass(bloomPass);
+                else composer.removePass(bloomPass);
+                document.getElementById('bloom-controls').style.display = 
+                  activeEffects.bloom ? 'block' : 'none';
+                break;
+              case 'pixelated':
+                if (activeEffects.pixelated) composer.addPass(pixelatePass);
+                else composer.removePass(pixelatePass);
+                document.getElementById('pixelated-controls').style.display = 
+                  activeEffects.pixelated ? 'block' : 'none';
+                break;
+              case 'glitch':
+                if (activeEffects.glitch) composer.addPass(glitchPass);
+                else composer.removePass(glitchPass);
+                break;
+            }
+            
+            btn.classList.toggle('active', activeEffects[effect]);
+          });
+        });
+        
+        // Настройка параметров эффектов
+        bloomIntensity.addEventListener('input', (e) => {
+          bloomPass.strength = parseFloat(e.target.value);
+        });
+        
+        pixelatedSize.addEventListener('input', (e) => {
+          pixelateEffect.uniforms.size.value = parseInt(e.target.value);
         });
       });
     </script>
     
-    <!-- Loads <model-viewer> for browsers: -->
+    <!-- Основная библиотека model-viewer -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
   </body>
 </html>
